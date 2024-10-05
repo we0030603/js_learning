@@ -1,0 +1,57 @@
+function waitForElement(xpath, timeout) {
+    return new Promise((resolve, reject) => {
+        const startTime = Date.now();
+
+        const checkExist = () => {
+            const element = document.evaluate(xpath, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (element) {
+                resolve(element);
+            } else if (Date.now() - startTime >= timeout) {
+                reject(new Error('Element not found within timeout'));
+            } else {
+                requestAnimationFrame(checkExist);
+            }
+        };
+        requestAnimationFrame(checkExist);
+    });
+}
+
+async function executeSteps() {
+    const maxRetries = 3;
+    let retries = 0;
+
+    while (retries < maxRetries) {
+        try {
+            // Bước 1: Kiểm tra sự tồn tại của phần tử
+            await waitForElement('//div[@class="new-message-bot-commands-view"]', 1000);
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Đợi 1 giây
+
+            // Bước 2: Click vào phần tử
+            const commandElement = document.evaluate('//div[@class="new-message-bot-commands-view"]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            commandElement.click();
+
+            // Bước 3: Đợi sự xuất hiện của phần tử "Launch"
+            await waitForElement('//*[text()="Launch"]', 3000);
+            const launchElement = document.evaluate('//*[text()="Launch"]', document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            launchElement.click();
+
+            // Bước 4: Đợi sự xuất hiện của iframe
+            try {
+                await waitForElement('//iframe', 10000);
+                break; // Ngưng lặp lại nếu iframe xuất hiện
+            } catch (e) {
+                // Nếu không tìm thấy iframe, tiếp tục vòng lặp
+            }
+        } catch (error) {
+            console.log(error.message);
+            return; // Ngưng nếu có lỗi hoặc không tìm thấy phần tử
+        }
+
+        retries++;
+    }
+
+    console.log("Exceeded maximum retries without finding iframe.");
+}
+
+// Gọi hàm
+executeSteps();
